@@ -6,6 +6,8 @@ import (
 	"math"
 	"math/big"
 	"strings"
+
+	"github.com/shopspring/decimal"
 )
 
 // Operator ...
@@ -312,6 +314,7 @@ func binopTypeSwitch(
 	l, r any,
 	callbackInts func(_, _ int) any,
 	callbackFloats func(_, _ float64) any,
+	callbackDecimals func(_, _ decimal.Decimal) any,
 	callbackBigInts func(_, _ *big.Int) any,
 	callbackStrings func(_, _ string) any,
 	callbackArrays func(_, _ []any) any,
@@ -332,6 +335,8 @@ func binopTypeSwitch(
 			return callbackInts(l, r)
 		case float64:
 			return callbackFloats(float64(l), r)
+		case decimal.Decimal:
+			return callbackDecimals(decimal.NewFromInt(int64(l)), r)
 		case *big.Int:
 			return callbackBigInts(big.NewInt(int64(l)), r)
 		default:
@@ -343,8 +348,23 @@ func binopTypeSwitch(
 			return callbackFloats(l, float64(r))
 		case float64:
 			return callbackFloats(l, r)
+		case decimal.Decimal:
+			return callbackDecimals(decimal.NewFromFloat(l), r)
 		case *big.Int:
 			return callbackFloats(l, bigToFloat(r))
+		default:
+			return fallback(l, r)
+		}
+	case decimal.Decimal:
+		switch r := r.(type) {
+		case int:
+			return callbackDecimals(l, decimal.NewFromInt(int64(r)))
+		case float64:
+			return callbackDecimals(l, decimal.NewFromFloat(r))
+		case decimal.Decimal:
+			return callbackDecimals(l, r)
+		case *big.Int:
+			return callbackDecimals(l, decimal.NewFromBigInt(r, 0))
 		default:
 			return fallback(l, r)
 		}
@@ -354,6 +374,8 @@ func binopTypeSwitch(
 			return callbackBigInts(l, big.NewInt(int64(r)))
 		case float64:
 			return callbackFloats(bigToFloat(l), r)
+		case decimal.Decimal:
+			return callbackDecimals(decimal.NewFromBigInt(l, 0), r)
 		case *big.Int:
 			return callbackBigInts(l, r)
 		default:
@@ -425,6 +447,7 @@ func funcOpAdd(_, l, r any) any {
 			return x.Add(x, y)
 		},
 		func(l, r float64) any { return l + r },
+		func(l, r decimal.Decimal) any { return l.Add(r) },
 		func(l, r *big.Int) any { return new(big.Int).Add(l, r) },
 		func(l, r string) any { return l + r },
 		func(l, r []any) any {
@@ -484,6 +507,7 @@ func funcOpSub(_, l, r any) any {
 			return x.Sub(x, y)
 		},
 		func(l, r float64) any { return l - r },
+		func(l, r decimal.Decimal) any { return l.Sub(r) },
 		func(l, r *big.Int) any { return new(big.Int).Sub(l, r) },
 		func(l, r string) any { return &binopTypeError{"subtract", l, r} },
 		func(l, r []any) any {
@@ -514,6 +538,7 @@ func funcOpMul(_, l, r any) any {
 			return x.Mul(x, y)
 		},
 		func(l, r float64) any { return l * r },
+		func(l, r decimal.Decimal) any { return l.Mul(r) },
 		func(l, r *big.Int) any { return new(big.Int).Mul(l, r) },
 		func(l, r string) any { return &binopTypeError{"multiply", l, r} },
 		func(l, r []any) any { return &binopTypeError{"multiply", l, r} },
@@ -585,6 +610,15 @@ func funcOpDiv(_, l, r any) any {
 			}
 			return l / r
 		},
+		func(l, r decimal.Decimal) any {
+			if r.IsZero() {
+				if l.IsZero() {
+					return math.NaN()
+				}
+				return &zeroDivisionError{l, r}
+			}
+			return l.Div(r)
+		},
 		func(l, r *big.Int) any {
 			if r.Sign() == 0 {
 				if l.Sign() == 0 {
@@ -629,6 +663,13 @@ func funcOpMod(_, l, r any) any {
 				return &zeroModuloError{l, r}
 			}
 			return floatToInt(l) % ri
+		},
+		func(l, r decimal.Decimal) any {
+			ri := r.BigInt()
+			if ri.Sign() == 0 {
+				return &zeroModuloError{l, r}
+			}
+			return new(big.Int).Rem(l.BigInt(), ri)
 		},
 		func(l, r *big.Int) any {
 			if r.Sign() == 0 {

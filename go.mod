@@ -9,6 +9,7 @@ require (
 	github.com/itchyny/timefmt-go v0.1.5
 	github.com/mattn/go-isatty v0.0.17
 	github.com/mattn/go-runewidth v0.0.14
+	github.com/shopspring/decimal v1.3.1
 	gopkg.in/yaml.v3 v3.0.1
 )
 

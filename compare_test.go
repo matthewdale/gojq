@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/shopspring/decimal"
 	"github.com/wader/gojq"
 )
 
@@ -35,6 +36,16 @@ func TestCompare(t *testing.T) {
 		{1.00, 1.01, -1},
 		{1.01, 1.00, 1},
 		{1.01, 1.01, 0},
+		{decimal.New(1, 0), decimal.New(1, 0), 0},
+		{decimal.NewFromFloat(1.00), decimal.NewFromFloat(1.01), -1},
+		{decimal.NewFromFloat(1.01), decimal.NewFromFloat(1.00), 1},
+		{1, decimal.New(1, 0), 0},
+		{decimal.New(1, 0), 1, 0},
+		{1.00, decimal.NewFromFloat(1.01), -1},
+		{decimal.NewFromFloat(1.01), 1.00, 1},
+		{1.01, decimal.NewFromFloat(1.00), 1},
+		{big.NewInt(1), decimal.NewFromFloat(1.00), 0},
+		{decimal.NewFromFloat(1.01), big.NewInt(1), 1},
 		{1, big.NewInt(0), 1},
 		{big.NewInt(0), 1, -1},
 		{0, big.NewInt(0), 0},

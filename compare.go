@@ -3,6 +3,8 @@ package gojq
 import (
 	"math"
 	"math/big"
+
+	"github.com/shopspring/decimal"
 )
 
 // Compare l and r, and returns jq-flavored comparison value.
@@ -24,6 +26,9 @@ func compare(l, r any) int {
 			default:
 				return 1
 			}
+		},
+		func(l, r decimal.Decimal) any {
+			return l.Cmp(r)
 		},
 		func(l, r *big.Int) any {
 			return l.Cmp(r)
