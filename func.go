@@ -18,6 +18,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/itchyny/timefmt-go"
+	"github.com/shopspring/decimal"
 )
 
 //go:generate go run -modfile=go.dev.mod _tools/gen_builtin.go -i builtin.jq -o builtin.go
@@ -535,6 +536,7 @@ func funcContains(v, x any) any {
 	return binopTypeSwitch(v, x,
 		func(l, r int) any { return l == r },
 		func(l, r float64) any { return l == r },
+		func(l, r decimal.Decimal) any { return l.Equal(r) },
 		func(l, r *big.Int) any { return l.Cmp(r) == 0 },
 		func(l, r string) any { return strings.Contains(l, r) },
 		func(l, r []any) any {

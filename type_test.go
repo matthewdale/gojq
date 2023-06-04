@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/itchyny/gojq"
+	"github.com/shopspring/decimal"
 )
 
 func TestTypeOf(t *testing.T) {
@@ -19,6 +20,7 @@ func TestTypeOf(t *testing.T) {
 		{true, "boolean"},
 		{0, "number"},
 		{3.14, "number"},
+		{decimal.New(1, 0), "number"},
 		{math.NaN(), "number"},
 		{math.Inf(1), "number"},
 		{math.Inf(-1), "number"},

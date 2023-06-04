@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/itchyny/gojq"
+	"github.com/shopspring/decimal"
 )
 
 func TestPreview(t *testing.T) {
@@ -45,6 +46,10 @@ func TestPreview(t *testing.T) {
 		{
 			math.Inf(-1),
 			"-1.7976931348623157e+308",
+		},
+		{
+			decimal.New(1234567890123456789, -18),
+			"1.234567890123456789",
 		},
 		{
 			big.NewInt(9223372036854775807),

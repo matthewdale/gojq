@@ -3,6 +3,8 @@ package gojq
 import (
 	"fmt"
 	"math/big"
+
+	"github.com/shopspring/decimal"
 )
 
 // TypeOf returns the jq-flavored type name of v.
@@ -15,7 +17,7 @@ func TypeOf(v any) string {
 		return "null"
 	case bool:
 		return "boolean"
-	case int, float64, *big.Int:
+	case int, float64, *big.Int, decimal.Decimal:
 		return "number"
 	case string:
 		return "string"
