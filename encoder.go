@@ -8,6 +8,8 @@ import (
 	"sort"
 	"strconv"
 	"unicode/utf8"
+
+	"github.com/shopspring/decimal"
 )
 
 // Marshal returns the jq-flavored JSON encoding of v.
@@ -51,6 +53,8 @@ func (e *encoder) encode(v interface{}) {
 		e.w.Write(strconv.AppendInt(e.buf[:0], int64(v), 10))
 	case float64:
 		e.encodeFloat64(v)
+	case decimal.Decimal:
+		e.w.WriteString(v.String())
 	case *big.Int:
 		e.w.Write(v.Append(e.buf[:0], 10))
 	case string:

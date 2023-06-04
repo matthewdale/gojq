@@ -3,6 +3,8 @@ package gojq
 import (
 	"math"
 	"math/big"
+
+	"github.com/shopspring/decimal"
 )
 
 func compare(l, r interface{}) int {
@@ -26,6 +28,9 @@ func compare(l, r interface{}) int {
 			default:
 				return 1
 			}
+		},
+		func(l, r decimal.Decimal) interface{} {
+			return l.Cmp(r)
 		},
 		func(l, r *big.Int) interface{} {
 			return l.Cmp(r)

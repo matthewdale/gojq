@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/itchyny/gojq"
+	"github.com/shopspring/decimal"
 )
 
 func ExampleQuery_Run() {
@@ -145,7 +146,7 @@ func TestQueryRun_NumericTypes(t *testing.T) {
 		int64(math.MaxInt64), int64(math.MinInt64), uint64(math.MaxUint64), uint32(math.MaxUint32),
 		new(big.Int).SetUint64(math.MaxUint64), new(big.Int).SetUint64(math.MaxUint32),
 		json.Number(fmt.Sprint(uint64(math.MaxInt64))), json.Number(fmt.Sprint(uint64(math.MaxInt32))),
-		float64(1.0), float32(1.0),
+		float64(1.0), float32(1.0), decimal.New(1, 0),
 	})
 	for {
 		v, ok := iter.Next()

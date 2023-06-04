@@ -5,6 +5,8 @@ import (
 	"math/big"
 	"reflect"
 	"strings"
+
+	"github.com/shopspring/decimal"
 )
 
 // Operator ...
@@ -212,6 +214,7 @@ func binopTypeSwitch(
 	l, r interface{},
 	callbackInts func(int, int) interface{},
 	callbackFloats func(float64, float64) interface{},
+	callbackDecimals func(_, _ decimal.Decimal) interface{},
 	callbackBigInts func(*big.Int, *big.Int) interface{},
 	callbackStrings func(string, string) interface{},
 	callbackArrays func(l, r []interface{}) interface{},
@@ -228,6 +231,8 @@ func binopTypeSwitch(
 			return callbackBigInts(big.NewInt(int64(l)), big.NewInt(int64(r)))
 		case float64:
 			return callbackFloats(float64(l), r)
+		case decimal.Decimal:
+			return callbackDecimals(decimal.NewFromInt(int64(l)), r)
 		case *big.Int:
 			return callbackBigInts(big.NewInt(int64(l)), r)
 		default:
@@ -239,8 +244,23 @@ func binopTypeSwitch(
 			return callbackFloats(l, float64(r))
 		case float64:
 			return callbackFloats(l, r)
+		case decimal.Decimal:
+			return callbackDecimals(decimal.NewFromFloat(l), r)
 		case *big.Int:
 			return callbackFloats(l, bigToFloat(r))
+		default:
+			return fallback(l, r)
+		}
+	case decimal.Decimal:
+		switch r := r.(type) {
+		case int:
+			return callbackDecimals(l, decimal.NewFromInt(int64(r)))
+		case float64:
+			return callbackDecimals(l, decimal.NewFromFloat(r))
+		case decimal.Decimal:
+			return callbackDecimals(l, r)
+		case *big.Int:
+			return callbackDecimals(l, decimal.NewFromBigInt(r, 0))
 		default:
 			return fallback(l, r)
 		}
@@ -250,6 +270,8 @@ func binopTypeSwitch(
 			return callbackBigInts(l, big.NewInt(int64(r)))
 		case float64:
 			return callbackFloats(bigToFloat(l), r)
+		case decimal.Decimal:
+			return callbackDecimals(decimal.NewFromBigInt(l, 0), r)
 		case *big.Int:
 			return callbackBigInts(l, r)
 		default:
@@ -316,6 +338,7 @@ func funcOpAdd(_, l, r interface{}) interface{} {
 	return binopTypeSwitch(l, r,
 		func(l, r int) interface{} { return l + r },
 		func(l, r float64) interface{} { return l + r },
+		func(l, r decimal.Decimal) interface{} { return l.Add(r) },
 		func(l, r *big.Int) interface{} { return new(big.Int).Add(l, r) },
 		func(l, r string) interface{} { return l + r },
 		func(l, r []interface{}) interface{} {
@@ -345,6 +368,7 @@ func funcOpSub(_, l, r interface{}) interface{} {
 	return binopTypeSwitch(l, r,
 		func(l, r int) interface{} { return l - r },
 		func(l, r float64) interface{} { return l - r },
+		func(l, r decimal.Decimal) interface{} { return l.Sub(r) },
 		func(l, r *big.Int) interface{} { return new(big.Int).Sub(l, r) },
 		func(l, r string) interface{} { return &binopTypeError{"subtract", l, r} },
 		func(l, r []interface{}) interface{} {
@@ -372,6 +396,7 @@ func funcOpMul(_, l, r interface{}) interface{} {
 	return binopTypeSwitch(l, r,
 		func(l, r int) interface{} { return l * r },
 		func(l, r float64) interface{} { return l * r },
+		func(l, r decimal.Decimal) interface{} { return l.Mul(r) },
 		func(l, r *big.Int) interface{} { return new(big.Int).Mul(l, r) },
 		func(l, r string) interface{} { return &binopTypeError{"multiply", l, r} },
 		func(l, r []interface{}) interface{} { return &binopTypeError{"multiply", l, r} },
@@ -439,6 +464,15 @@ func funcOpDiv(_, l, r interface{}) interface{} {
 			}
 			return l / r
 		},
+		func(l, r decimal.Decimal) interface{} {
+			if r.IsZero() {
+				if l.IsZero() {
+					return math.NaN()
+				}
+				return &zeroDivisionError{l, r}
+			}
+			return l.Div(r)
+		},
 		func(l, r *big.Int) interface{} {
 			if r.Sign() == 0 {
 				if l.Sign() == 0 {
@@ -483,6 +517,13 @@ func funcOpMod(_, l, r interface{}) interface{} {
 				return &zeroModuloError{l, r}
 			}
 			return floatToInt(l) % ri
+		},
+		func(l, r decimal.Decimal) interface{} {
+			ri := r.BigInt()
+			if ri.Sign() == 0 {
+				return &zeroModuloError{l, r}
+			}
+			return new(big.Int).Rem(l.BigInt(), ri)
 		},
 		func(l, r *big.Int) interface{} {
 			if r.Sign() == 0 {
